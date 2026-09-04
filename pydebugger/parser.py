@@ -16,10 +16,11 @@ class ParsedTraceback:
     traceback_text: str
 
 
-# Regex to match the final exception line, e.g.:
-#   ValueError: invalid literal for int() with base 10: 'foo'
+# Regex to match the final exception line, including qualified names, e.g.:
+#   ValueError: invalid literal for int()
+#   __main__.MyCustomError: something went wrong
 _EXCEPTION_LINE_RE = re.compile(
-    r"^(?P<type>[A-Za-z_][A-Za-z0-9_]*):\s*(?P<message>.*)$"
+    r"^(?P<type>[A-Za-z_][A-Za-z0-9_.]*):\s*(?P<message>.*)$"
 )
 
 # Regex to match File "...", line N
@@ -55,17 +56,6 @@ def parse_traceback(stderr: str) -> Optional[ParsedTraceback]:
             exception_type = match.group("type")
             exception_message = match.group("message").strip()
             exc_line_idx = idx
-
-    if exc_line_idx == -1:
-        # Fallback: try to find any line that looks like an exception
-        for idx, line in enumerate(lines):
-            if ": " in line and not line.startswith(" ") and not line.startswith("\t"):
-                parts = line.split(": ", 1)
-                if len(parts) == 2 and parts[0].replace("_", "").isalpha():
-                    exception_type = parts[0]
-                    exception_message = parts[1]
-                    exc_line_idx = idx
-                    break
 
     # Find the most recent file/line in the traceback before the exception
     file_path: Optional[str] = None
