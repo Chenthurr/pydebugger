@@ -21,10 +21,10 @@ app = typer.Typer(
 console = Console()
 
 
-def _process_run(script_path: str, storage: Storage) -> None:
+def _process_run(script_path: str, storage: Storage, timeout: Optional[float] = None) -> None:
     """Run a single script, parse errors, classify, and log to storage."""
     console.print(f"[dim]Running {script_path} ...[/dim]")
-    result = run_script(script_path)
+    result = run_script(script_path, timeout=timeout)
 
     exception_type: Optional[str] = None
     exception_message: Optional[str] = None
@@ -32,7 +32,14 @@ def _process_run(script_path: str, storage: Storage) -> None:
     signature: Optional[str] = None
     traceback_text: Optional[str] = None
 
-    if result.exit_code != 0 and result.stderr:
+    if result.timed_out:
+        exception_type = result.exception_type or "TimeoutError"
+        exception_message = result.exception_message or "Execution timed out."
+        classification = classify_error(exception_type, exception_message)
+        category = classification.category
+        signature = classification.error_signature
+        traceback_text = result.stderr.strip() or None
+    elif result.exit_code != 0 and result.stderr:
         parsed = parse_traceback(result.stderr)
         if parsed:
             exception_type = parsed.exception_type
@@ -48,6 +55,11 @@ def _process_run(script_path: str, storage: Storage) -> None:
             category = "Unknown"
             signature = classify_error(exception_type, exception_message).error_signature
             traceback_text = result.stderr.strip()
+    elif result.exit_code != 0:
+        exception_type = "NonZeroExit"
+        exception_message = f"Process exited with code {result.exit_code}."
+        category = "Unknown"
+        signature = classify_error(exception_type, exception_message).error_signature
 
     storage.insert_run(
         script_name=Path(script_path).name,
@@ -79,6 +91,12 @@ def run(
     all_scripts: bool = typer.Option(
         False, "--all", "-a", help="Run all .py files in the target directory."
     ),
+    recursive: bool = typer.Option(
+        False, "--recursive", "-r", help="Include .py files in nested directories with --all."
+    ),
+    timeout: Optional[float] = typer.Option(
+        60.0, "--timeout", min=0.1, help="Maximum runtime per script in seconds."
+    ),
     db_path: Optional[str] = typer.Option(
         None, "--db", help="Path to SQLite database (default: ~/.pydebugger/runs.db)."
     ),
@@ -87,19 +105,19 @@ def run(
     storage = Storage(Path(db_path) if db_path else None)
 
     if all_scripts:
-        scripts = discover_scripts(target)
+        scripts = discover_scripts(target, recursive=recursive)
         if not scripts:
             console.print(f"[yellow]No .py files found in {target}[/yellow]")
             raise typer.Exit(1)
 
         console.print(f"[bold]Running {len(scripts)} script(s) from {target}...[/bold]\n")
         for script in scripts:
-            _process_run(script, storage)
+            _process_run(script, storage, timeout=timeout)
     else:
         if not Path(target).is_file():
             console.print(f"[red]File not found: {target}[/red]")
             raise typer.Exit(1)
-        _process_run(target, storage)
+        _process_run(target, storage, timeout=timeout)
 
 
 @app.command()
