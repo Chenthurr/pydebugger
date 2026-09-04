@@ -1,7 +1,5 @@
 """Tests for pydebugger.classifier."""
 
-import pytest
-
 from pydebugger.classifier import classify_error, generate_signature
 
 
@@ -59,7 +57,7 @@ def test_classify_fully_unknown():
 def test_signature_stability():
     sig1 = generate_signature("ValueError", "invalid literal for int() with base 10: 'abc'")
     sig2 = generate_signature("ValueError", "invalid literal for int() with base 10: 'xyz'")
-    assert sig1 == sig2  # Normalization should make them equal
+    assert sig1 == sig2
 
 
 def test_signature_different_types():
