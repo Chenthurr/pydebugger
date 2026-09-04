@@ -1,7 +1,5 @@
 """Tests for pydebugger.parser."""
 
-import pytest
-
 from pydebugger.parser import parse_traceback
 
 
