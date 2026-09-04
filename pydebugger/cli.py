@@ -1,6 +1,5 @@
 """CLI entry point for pydebugger using Typer."""
 
-import sys
 from pathlib import Path
 from typing import Optional
 
