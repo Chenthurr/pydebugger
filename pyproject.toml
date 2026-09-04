@@ -46,9 +46,9 @@ dev = [
 debugtool = "pydebugger.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/pydebugger"
-Repository = "https://github.com/yourusername/pydebugger"
-Issues = "https://github.com/yourusername/pydebugger/issues"
+Homepage = "https://github.com/Chenthurr/pydebugger"
+Repository = "https://github.com/Chenthurr/pydebugger"
+Issues = "https://github.com/Chenthurr/pydebugger/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["pydebugger"]
