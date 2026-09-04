@@ -11,14 +11,14 @@ When working with multiple Python scripts — especially in data pipelines, batc
 3. Classifying errors (Is this an import issue? A logic bug? A missing file?)
 4. Documenting findings in spreadsheets or issue trackers
 
-**pydebugger** automates this entire workflow. It runs your scripts as subprocesses, parses tracebacks into structured data, classifies errors by category, generates stable signatures for duplicates, and stores everything in a local SQLite database. The result: faster time-to-diagnosis and a searchable history of every failure.
+**pydebugger** automates this workflow. It runs your scripts as subprocesses, parses tracebacks into structured data, classifies errors by category, generates stable signatures for duplicates, and stores everything in a local SQLite database.
 
 ## Architecture
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   CLI       │────▶│   Runner    │────▶│   Parser    │────▶│  Classifier │────▶│   Storage   │
-│  (typer)    │     │ (subprocess)│     │   (regex)   │     │  (heuristics)│     │  (SQLite)   │
+│  (typer)    │     │ (subprocess)│     │   (regex)   │     │  (heuristics)│     │  (SQLite)  │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘     └──────┬──────┘
                                                                                        │
                                                                                        ▼
@@ -29,16 +29,16 @@ When working with multiple Python scripts — especially in data pipelines, batc
 ```
 
 **Flow:**
-1. **Runner** executes the target script via `subprocess`, capturing stdout, stderr, exit code, and duration.
-2. **Parser** scans stderr for Python tracebacks and extracts exception type, message, file path, and line number.
-3. **Classifier** maps the exception type to a high-level category (e.g., `ImportError`, `LogicError`). If the type is unknown, keyword heuristics on the message provide a fallback. A stable MD5-based signature is generated to detect duplicates.
-4. **Storage** persists every run to a local SQLite database with indexes on script name, error signature, and timestamp for fast queries.
+1. **Runner** executes the target script via `subprocess`, capturing stdout, stderr, exit code, and duration. Each run has a configurable timeout.
+2. **Parser** scans stderr for Python tracebacks and extracts exception type, message, file path, and line number, including qualified custom exception names.
+3. **Classifier** maps the exception type to a high-level category. If the type is unknown, keyword heuristics on the message provide a fallback. A stable MD5-based signature is generated to detect duplicates.
+4. **Storage** persists every run to a local SQLite database with indexes on script name, error signature, and timestamp.
 5. **Report** uses `rich` to render summary tables, live tail views, and per-script history.
 
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/pydebugger.git
+git clone https://github.com/Chenthurr/pydebugger.git
 cd pydebugger
 pip install -e .
 ```
@@ -59,12 +59,13 @@ pip install -e ".[dev]"
 debugtool run sample_scripts/bug_type_error.py
 ```
 
-**Sample output:**
+By default, each script is allowed to run for up to 60 seconds. Override the limit with `--timeout`:
 
+```bash
+debugtool run --timeout 10 sample_scripts/my_script.py
 ```
-Running sample_scripts/bug_type_error.py ...
-✗ bug_type_error.py — TypeError (8.4 ms)
-```
+
+A timed-out run is recorded as `TimeoutError` instead of blocking indefinitely.
 
 ### Run All Scripts in a Directory
 
@@ -72,64 +73,16 @@ Running sample_scripts/bug_type_error.py ...
 debugtool run --all sample_scripts/
 ```
 
-**Sample output:**
+To include nested directories:
 
-```
-Running 11 script(s) from sample_scripts/...
-
-Running sample_scripts/bug_attribute_error.py ...
-✗ bug_attribute_error.py — AttributeError (9.1 ms)
-Running sample_scripts/bug_custom_logic.py ...
-✗ bug_custom_logic.py — AssertionError (7.8 ms)
-Running sample_scripts/bug_file_not_found.py ...
-✗ bug_file_not_found.py — FileNotFoundError (8.2 ms)
-Running sample_scripts/bug_import_error.py ...
-✗ bug_import_error.py — ModuleNotFoundError (12.5 ms)
-Running sample_scripts/bug_index_error.py ...
-✗ bug_index_error.py — IndexError (7.9 ms)
-Running sample_scripts/bug_key_error.py ...
-✗ bug_key_error.py — KeyError (8.0 ms)
-Running sample_scripts/bug_name_error.py ...
-✗ bug_name_error.py — NameError (8.3 ms)
-Running sample_scripts/bug_recursion_error.py ...
-✗ bug_recursion_error.py — RecursionError (15.2 ms)
-Running sample_scripts/bug_type_error.py ...
-✗ bug_type_error.py — TypeError (8.4 ms)
-Running sample_scripts/bug_value_error.py ...
-✗ bug_value_error.py — ValueError (8.1 ms)
-Running sample_scripts/bug_zero_division.py ...
-✗ bug_zero_division.py — ZeroDivisionError (7.7 ms)
+```bash
+debugtool run --all --recursive sample_scripts/
 ```
 
 ### View Report
 
 ```bash
 debugtool report
-```
-
-**Sample output:**
-
-```
-                    pydebugger Report
-    Total Runs: 11 | Total Errors: 11
-
-┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
-┃ Category               ┃ Count ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ LogicError             │ 5     │
-│ TypeError/ValueError   │ 2     │
-│ IOError/FileNotFound…  │ 1     │
-│ ImportError            │ 1     │
-│ KeyError/IndexError    │ 2     │
-└────────────────────────┴───────┘
-
-         Top 10 Most Frequent Error Signatures
-┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
-┃ Signature        ┃ Type         ┃ Message                    ┃ Count ┃
-┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ a1b2c3d4e5f6...  │ TypeError    │ unsupported operand type…  │ 1     │
-│ ...              │ ...          │ ...                        │ ...   │
-└──────────────────┴──────────────┴────────────────────────────┴───────┘
 ```
 
 ### Live Tail
@@ -150,18 +103,6 @@ Press `Ctrl+C` to exit live mode.
 debugtool history bug_type_error.py
 ```
 
-**Sample output:**
-
-```
-         Execution History: bug_type_error.py
-
-┏━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
-┃ Timestamp         ┃ Exit ┃ Category           ┃ Type      ┃ Message                  ┃ Duration (ms)┃
-┡━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
-│ 2026-08-17T08:... │ 1    │ TypeError/ValueEr… │ TypeError │ unsupported operand ty…  │ 8.4         │
-└───────────────────┴──────┴────────────────────┴───────────┴──────────────────────────┴─────────────┘
-```
-
 ### Export to JSON Lines
 
 ```bash
@@ -174,40 +115,20 @@ pydebugger uses a two-tier classification system:
 
 ### Tier 1: Exception Type Mapping
 
-The exception class name is the primary signal. Common mappings:
+Common mappings include:
 
-| Exception Type            | Category                |
-|---------------------------|-------------------------|
-| `ImportError`             | `ImportError`           |
-| `ModuleNotFoundError`     | `ImportError`           |
-| `TypeError`               | `TypeError/ValueError`  |
-| `ValueError`              | `TypeError/ValueError`  |
-| `FileNotFoundError`       | `IOError/FileNotFoundError` |
-| `IOError` / `OSError`     | `IOError/FileNotFoundError` |
-| `KeyError`                | `KeyError/IndexError`   |
-| `IndexError`              | `KeyError/IndexError`   |
-| `ZeroDivisionError`       | `LogicError`            |
-| `RecursionError`          | `LogicError`            |
-| `AssertionError`          | `LogicError`            |
-| `AttributeError`          | `LogicError`            |
-| `NameError`               | `LogicError`            |
-| `MemoryError`             | `ResourceError`         |
-| `TimeoutError`            | `ResourceError`         |
+| Exception Type | Category |
+|---|---|
+| `ImportError`, `ModuleNotFoundError` | `ImportError` |
+| `TypeError`, `ValueError` | `TypeError/ValueError` |
+| `FileNotFoundError`, `IOError`, `OSError` | `IOError/FileNotFoundError` |
+| `KeyError`, `IndexError` | `KeyError/IndexError` |
+| `ZeroDivisionError`, `RecursionError`, `AssertionError`, `AttributeError`, `NameError` | `LogicError` |
+| `MemoryError`, `TimeoutError` | `ResourceError` |
 
 ### Tier 2: Keyword Heuristics
 
-If the exception type is unknown (e.g., a custom exception), the message is scanned for keywords:
-
-| Keyword Pattern                  | Fallback Category       |
-|----------------------------------|-------------------------|
-| `no module named`                | `ImportError`           |
-| `cannot import`                  | `ImportError`           |
-| `file not found` / `no such file`| `IOError/FileNotFoundError` |
-| `permission denied`              | `IOError/FileNotFoundError` |
-| `division by zero`               | `LogicError`            |
-| `maximum recursion`              | `LogicError`            |
-| `not supported between instances`| `TypeError/ValueError`  |
-| `missing ... required`           | `TypeError/ValueError`  |
+If the exception type is unknown, the message is scanned for keywords such as `no module named`, `cannot import`, `file not found`, `permission denied`, `division by zero`, `maximum recursion`, and `missing ... required`.
 
 ### Error Signature
 
@@ -217,17 +138,11 @@ To detect recurring errors across runs, pydebugger generates a stable signature:
 signature = md5(exception_type + ":" + normalized_message)[:16]
 ```
 
-Normalization strips variable content (quoted strings, memory addresses, numbers, file paths) so that semantically identical errors produce the same signature even if their messages differ slightly.
+Normalization strips variable content such as quoted strings, memory addresses, numbers, and file paths so that semantically similar errors can share a signature. The hash is used only as a deduplication identifier, not for security.
 
-## Benchmark: Efficiency Metric
+## Benchmark: Efficiency Experiment
 
-The repository includes a benchmark script that compares **manual debugging time** against **pydebugger-assisted diagnosis**.
-
-### Methodology
-
-1. **Manual debugging time** is estimated at ~2 minutes per error (reading traceback, identifying root cause, documenting).
-2. **Tool time** is the sum of pydebugger runtime plus ~15 seconds to read the structured report.
-3. The benchmark runs all 11 sample scripts and computes the percentage reduction.
+The repository includes a benchmark script that compares an **explicitly configured manual-diagnosis estimate** against pydebugger-assisted diagnosis. It is an experiment, not a measured claim about average developer productivity.
 
 ### Running the Benchmark
 
@@ -235,22 +150,17 @@ The repository includes a benchmark script that compares **manual debugging time
 python benchmark/benchmark_manual_vs_tool.py
 ```
 
-### Expected Output
+You can change the assumptions explicitly:
 
-```
-============================================================
-Benchmark: Manual Debugging vs. pydebugger
-============================================================
-
-Sample scripts with errors: 11
-pydebugger runtime:          0.15s
-Estimated manual time:       1320s (22.0 min)
-Estimated tool time:         15.15s
-Time saved:                  1305s (21.8 min)
-Reduction in time-to-diagnosis: [X]%
+```bash
+python benchmark/benchmark_manual_vs_tool.py --manual-seconds 120 --report-seconds 15
 ```
 
-> **Note:** The `[X]%` placeholder should be replaced with the actual measured value after running the benchmark. Based on the estimates above, the expected reduction is approximately **98.9%**.
+The benchmark reports the sample error count, actual pydebugger runtime, configured assumptions, estimated time saved, and calculated percentage reduction. For a real study, replace the assumptions with measured times from representative debugging sessions.
+
+## Security Considerations
+
+**pydebugger executes target Python scripts with the same operating-system privileges as the user running the command.** It is a debugging runner, not a sandbox. Do not use it to execute untrusted or malicious Python code unless you provide an external sandbox or other isolation boundary.
 
 ## Development
 
@@ -269,9 +179,11 @@ pytest --cov=pydebugger --cov-report=term-missing
 ### Linting and Type Checking
 
 ```bash
-ruff check pydebugger/
+ruff check pydebugger/ tests/ benchmark/
 mypy pydebugger/
 ```
+
+CI runs tests, linting, and type checking across Python 3.9–3.13.
 
 ## Contributing
 
