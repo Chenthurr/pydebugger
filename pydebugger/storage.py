@@ -3,7 +3,7 @@
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -77,7 +77,7 @@ class Storage:
         duration_ms: float,
     ) -> int:
         """Insert a new run record and return its ID."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 """
