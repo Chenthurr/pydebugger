@@ -5,7 +5,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
 DEFAULT_DB_PATH = Path.home() / ".pydebugger" / "runs.db"
@@ -138,7 +138,7 @@ class Storage:
             "top_signatures": [dict(row) for row in signatures],
         }
 
-    def get_history(self, script_name: str, limit: int = 50) -> List[LogRecord]:
+    def get_history(self, script_name: str, limit: int = 50) -> list[LogRecord]:
         """Return execution history for a specific script."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -153,7 +153,7 @@ class Storage:
             ).fetchall()
         return [LogRecord(**dict(row)) for row in rows]
 
-    def get_recent(self, limit: int = 20) -> List[LogRecord]:
+    def get_recent(self, limit: int = 20) -> list[LogRecord]:
         """Return the most recent runs across all scripts."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
