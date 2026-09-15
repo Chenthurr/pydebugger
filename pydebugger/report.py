@@ -1,7 +1,5 @@
 """Rich-formatted reporting and live tail for pydebugger."""
 
-from typing import List, Optional
-
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
@@ -57,7 +55,7 @@ def print_summary(storage: Storage) -> None:
     console.print()
 
 
-def print_history(records: List[LogRecord], script_name: str) -> None:
+def print_history(records: list[LogRecord], script_name: str) -> None:
     """Print execution history for a specific script."""
     if not records:
         console.print(f"[yellow]No history found for {script_name}[/yellow]")
@@ -95,7 +93,7 @@ def print_history(records: List[LogRecord], script_name: str) -> None:
     console.print()
 
 
-def print_tail(records: List[LogRecord]) -> None:
+def print_tail(records: list[LogRecord]) -> None:
     """Print the most recent error records."""
     if not records:
         console.print("[yellow]No records found.[/yellow]")
@@ -114,15 +112,15 @@ def print_tail(records: List[LogRecord]) -> None:
             continue
         title = f"[bold red]{rec.script_name}[/bold red] — {rec.timestamp[:19]}"
         content = Text()
-        content.append(f"Type: ", style="bold")
+        content.append("Type: ", style="bold")
         content.append(f"{rec.exception_type}\n", style="yellow")
-        content.append(f"Category: ", style="bold")
+        content.append("Category: ", style="bold")
         content.append(f"{rec.category}\n", style="cyan")
-        content.append(f"Message: ", style="bold")
+        content.append("Message: ", style="bold")
         content.append(f"{rec.message}\n", style="white")
-        content.append(f"Signature: ", style="bold")
+        content.append("Signature: ", style="bold")
         content.append(f"{rec.error_signature}\n", style="dim")
-        content.append(f"Duration: ", style="bold")
+        content.append("Duration: ", style="bold")
         content.append(f"{rec.duration_ms:.1f} ms", style="green")
         console.print(Panel(content, title=title, border_style="red"))
 
