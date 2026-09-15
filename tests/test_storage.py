@@ -36,7 +36,7 @@ def test_insert_and_get_summary(temp_storage):
 
 def test_get_history(temp_storage):
     storage = temp_storage
-    for i in range(3):
+    for _ in range(3):
         storage.insert_run(
             script_name="script_a.py",
             exit_code=0,
