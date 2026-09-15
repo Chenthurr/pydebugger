@@ -5,7 +5,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
 @dataclass
@@ -82,7 +82,7 @@ def run_script(
     )
 
 
-def discover_scripts(directory: str, recursive: bool = False) -> List[str]:
+def discover_scripts(directory: str, recursive: bool = False) -> list[str]:
     """Discover .py files in a directory, sorted alphabetically.
 
     Args:
