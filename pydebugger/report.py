@@ -1,6 +1,6 @@
 """Rich-formatted reporting and live tail for pydebugger."""
 
-from rich.console import Console
+from rich.console import Console  # noqa: I001
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
