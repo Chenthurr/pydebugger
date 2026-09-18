@@ -1,6 +1,6 @@
 """Tests for pydebugger.parser."""
 
-from pydebugger.parser import parse_traceback
+from pydebugger.parser import parse_traceback  # noqa: I001
 
 
 SIMPLE_TRACEBACK = """Traceback (most recent call last):
