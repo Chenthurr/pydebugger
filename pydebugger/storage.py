@@ -1,6 +1,6 @@
 """SQLite-backed structured logging for pydebugger."""
 
-import json
+import json  # noqa: I001
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
